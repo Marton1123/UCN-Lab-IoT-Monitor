@@ -1,20 +1,29 @@
-# Manual de Operación
+# Monitor Biofloc - Manual de Usuario
 
-Este documento describe el funcionamiento y operación de la plataforma de monitoreo IoT.
+**Sistema de monitoreo IoT para el Laboratorio de Cultivos de Crustáceos (UCN)**
 
 ---
 
-## 1. Panel de Control Operativo (Dashboard)
+## Acceso al Sistema
 
-El Dashboard es la interfaz principal para la supervisión en tiempo real de las unidades de cultivo.
+### Login
+1. Ingresa la contraseña configurada
+2. Presiona **Enter** o haz clic en **"Iniciar Sesión"**
+
+### Cerrar Sesión
+- Haz clic en el botón **"Salir"** en la barra de navegación (esquina derecha)
+
+---
+
+## 1. Panel de Control (Dashboard)
+
+El Dashboard es la interfaz principal para la supervisión en tiempo real.
 
 ### 1.1 Estados de Operación
 
-Cada tarjeta de dispositivo presenta un indicador de color que refleja el estado consolidado de la unidad:
-
 | Estado | Color | Descripción |
 |--------|-------|-------------|
-| **Normal** | 🟢 Verde | Todos los parámetros dentro de rangos óptimos |
+| **Normal** | 🟢 Verde | Parámetros dentro de rangos óptimos |
 | **Alerta** | 🟡 Amarillo | Parámetros fuera del rango óptimo pero dentro de límites seguros |
 | **Crítico** | 🔴 Rojo | Valores fuera de límites de seguridad biológica |
 | **Offline** | ⚫ Gris | Sin transmisión de datos por más de 5 minutos |
@@ -22,150 +31,108 @@ Cada tarjeta de dispositivo presenta un indicador de color que refleja el estado
 ### 1.2 Tarjetas de Dispositivo
 
 Cada tarjeta muestra:
-
 - **Encabezado**: Nombre del dispositivo, ubicación y estado
-- **Sensores**: Hasta 4 lecturas de sensores con sus valores actuales
+- **Sensores**: Hasta 4 lecturas con sus valores actuales
 - **Metadata**: ID técnico y hora de última actualización
-- **Botón de Gráficas**: Acceso directo a gráficas del dispositivo (📊)
+- **Botón de Gráficas**: Acceso directo (📊)
 
-### 1.3 Actualización Parcial (Nuevo ✨)
+### 1.3 Actualización de Datos
 
-Cada tarjeta tiene un botón **"Actualizar"** en la parte inferior que permite:
-
-- Refrescar **solo los datos de ese dispositivo** sin recargar toda la página
-- Obtener la lectura más reciente de la base de datos
-- Ver cambios instantáneos sin perder el scroll o estado de la página
-
-> **Tip**: Usa el botón "Actualizar Todo" en la barra superior para refrescar todos los dispositivos a la vez.
+- **Botón "Actualizar"**: Refresca solo ese dispositivo
+- **Botón "Actualizar Todo"**: Recarga todos los dispositivos
 
 ### 1.4 Filtrado y Búsqueda
 
-La barra de herramientas superior permite filtrar los dispositivos visibles por:
-- **Estado**: Mostrar solo unidades en Alerta o Críticas
-- **Ubicación**: Filtrar por sector (ej: Laboratorio, Invernadero)
-- **Texto**: Búsqueda libre por ID técnico o alias
+- **Por Estado**: Normal, Alerta, Crítico, Offline
+- **Por Ubicación**: Sector físico
+- **Por Texto**: Búsqueda por ID o alias
+- **Checkbox Offline**: Mostrar/ocultar dispositivos sin conexión
 
 ---
 
 ## 2. Análisis de Tendencias (Gráficas)
 
-Módulo para la evaluación visual del comportamiento de parámetros en el tiempo.
+Visualización del comportamiento de parámetros en el tiempo.
 
 ### 2.1 Funcionalidades
 
-- **Rango Temporal**: Seleccionar desde la última hora hasta el último mes
-- **Comparativa**: Superponer curvas de múltiples dispositivos
-- **Estadística Descriptiva**: Tabla con Min, Max, Promedio y Mediana
-- **Interactividad**: Zoom, pan y exportación de gráficas como imagen
+- Rango temporal seleccionable
+- Comparativa multi-dispositivo
+- Estadísticas: Min, Max, Promedio, Mediana
+- Zoom, pan y exportación de imágenes
 
 ### 2.2 Uso
 
-1. Selecciona un dispositivo del menú desplegable
-2. Define el rango de fechas deseado
-3. Elige los sensores a visualizar
+1. Selecciona dispositivo(s)
+2. Define rango de fechas
+3. Elige sensores a visualizar
 4. La gráfica se actualiza automáticamente
 
 ---
 
-## 3. Gestión de Datos Históricos (Datos)
+## 3. Gestión de Datos (Historial)
 
-Acceso al registro completo de mediciones almacenadas en la base de datos.
+Acceso al registro completo de mediciones.
 
-### 3.1 Consulta de Datos
+### 3.1 Consulta
 
-- **Filtrado**: Por rango de fechas y dispositivos específicos
-- **Tabla Interactiva**: Visualización con paginación
-- **Ordenamiento**: Click en columnas para ordenar
+- Filtrado por fechas y dispositivos
+- Tabla con paginación
+- Ordenamiento por columnas
 
-### 3.2 Exportación de Datos (Nuevo ✨)
+### 3.2 Exportación
 
-| Formato | Recomendado Para |
-|---------|------------------|
-| **Excel (.xlsx)** | Reportes, análisis pequeños (<50,000 registros) |
+| Formato | Uso Recomendado |
+|---------|-----------------|
+| **Excel (.xlsx)** | Reportes, análisis (<50,000 registros) |
 | **CSV** | Backups masivos, procesamiento externo |
-
-**Cómo exportar:**
-1. Aplica los filtros deseados
-2. Haz clic en el botón de descarga correspondiente
-3. El archivo se descargará automáticamente
 
 ---
 
-## 4. Configuración del Sistema
+## 4. Configuración
 
-Panel administrativo para la gestión de metadatos y parámetros de control.
-
-### 4.1 Gestión de Identidad
-
-Permite asignar nombres amigables a los IDs técnicos:
+### 4.1 Identidad de Dispositivos
 
 | Campo | Descripción |
 |-------|-------------|
-| **ID Técnico** | Identificador único del hardware (inmutable) |
-| **Alias** | Nombre operativo visible en el Dashboard |
-| **Ubicación** | Sector físico de instalación |
+| **ID Técnico** | Identificador único del hardware |
+| **Alias** | Nombre visible en Dashboard |
+| **Ubicación** | Sector físico |
 
-### 4.2 Configuración de Umbrales
-
-El sistema utiliza un modelo de cuatro puntos para definir los estados:
+### 4.2 Umbrales de Alerta
 
 ```
 [CRÍTICO] ← Mín Crítico ← [ALERTA] ← Mín Óptimo ← [NORMAL] → Máx Óptimo → [ALERTA] → Máx Crítico → [CRÍTICO]
 ```
 
-1. **Mínimo Crítico**: Límite inferior de seguridad biológica
-2. **Mínimo Óptimo**: Inicio del rango ideal de producción
-3. **Máximo Óptimo**: Fin del rango ideal de producción
-4. **Máximo Crítico**: Límite superior de seguridad biológica
+- **Mínimo Crítico**: Límite inferior de seguridad
+- **Mínimo Óptimo**: Inicio del rango ideal
+- **Máximo Óptimo**: Fin del rango ideal
+- **Máximo Crítico**: Límite superior de seguridad
 
 ---
 
-## 5. Scripts de Utilidad
+## 5. Solución de Problemas
 
-El proyecto incluye scripts para tareas especiales en la carpeta `scripts/`:
+### Dispositivo "Offline"
 
-### 5.1 Generador de Datos Mock
+1. Verificar alimentación del nodo sensor
+2. Comprobar conectividad WiFi
+3. Revisar estado de la antena
 
-```bash
-python scripts/mock_data_generator.py
-```
+### Datos no se actualizan
 
-Genera datos de prueba realistas para testing:
-- Múltiples dispositivos simulados
-- Variaciones naturales en parámetros
-- Escenarios de alerta y condiciones críticas
-
-### 5.2 Exportación Directa a Excel
-
-```bash
-python scripts/export_to_excel.py
-```
-
-Exporta datos directamente desde MongoDB a un archivo Excel local.
-
----
-
-## 6. Solución de Problemas
-
-### El dispositivo aparece como "Offline"
-
-- Verificar alimentación eléctrica del nodo sensor
-- Comprobar conectividad WiFi
-- Revisar estado de la antena
-
-### Los datos no se actualizan
-
-1. Hacer clic en "Actualizar" en la tarjeta del dispositivo
+1. Clic en "Actualizar" en la tarjeta
 2. Si persiste, usar "Actualizar Todo"
-3. Verificar conexión a la base de datos
+3. Verificar conexión a base de datos
 
-### Errores de conexión a MongoDB
+### Error de conexión MongoDB
 
-- Verificar que las credenciales en `.env` sean correctas
-- Comprobar que la IP esté en la whitelist de MongoDB Atlas
-- Revisar el estado del cluster en la consola de Atlas
+1. Verificar credenciales en `.env`
+2. Comprobar whitelist de IPs en Atlas
+3. Revisar estado del cluster
 
 ---
 
-**Desarrollado por**: [Marton1123](https://github.com/Marton1123)  
-**Escuela de Ingeniería Coquimbo - Universidad Católica del Norte (UCN)**
+**Laboratorio de Cultivos de Crustáceos**  
+**Departamento de Acuicultura - Universidad Católica del Norte (UCN)**

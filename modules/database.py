@@ -40,25 +40,14 @@ class DatabaseConnection:
     def __init__(self):
         self.sources = []
         
-        # Cargar fuentes dinámicamente (1 y 2, y escalable a N si se quisiera)
-        # Fuente 1
+        # Cargar fuente de base de datos primaria
         self._add_source(
             uri=os.getenv("MONGO_URI"),
             db_name=os.getenv("MONGO_DB"),
             telem_coll=os.getenv("MONGO_COLLECTION"),
             dev_coll=os.getenv("MONGO_DEVICES_COLLECTION"),
             name="Primary",
-            is_writable=True # Solo la principal es editable por defecto para seguridad
-        )
-        
-        # Fuente 2
-        self._add_source(
-            uri=os.getenv("MONGO_URI_2"),
-            db_name=os.getenv("MONGO_DB_2"),
-            telem_coll=os.getenv("MONGO_COLLECTION_2"),
-            dev_coll=os.getenv("MONGO_DEVICES_COLLECTION_2"),
-            name="Secondary",
-            is_writable=True # Habilitamos escritura para corregir datos del Partner 
+            is_writable=True
         )
 
     def _add_source(self, uri, db_name, telem_coll, dev_coll, name, is_writable=False):

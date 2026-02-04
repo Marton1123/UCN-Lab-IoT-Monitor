@@ -1,9 +1,42 @@
-# 📝 Resumen de Cambios - Versión 3.1.0
+# 📝 Resumen de Cambios - Versión 4.0.0
 
 ## 🎯 Título del Commit
 ```
-feat: UI mejorada con filtros inteligentes y experiencia de usuario optimizada
+feat: Sistema de autenticación y nuevo branding Monitor Biofloc
 ```
+
+---
+
+## 🆕 Cambios v4.0.0 (Febrero 2026)
+
+### Sistema de Autenticación
+- **Login obligatorio**: Pantalla de acceso antes del dashboard
+- **bcrypt**: Password hashing con 12 rounds
+- **Botón Salir**: En navbar, discreto y funcional
+- **Enter para login**: Formulario con soporte de Enter
+- **UI unificada**: Diseño minimalista consistente con el dashboard
+
+### Nuevo Branding
+- **Nombre**: "Monitor Biofloc" (antes Core-IoT-Monitor)
+- **Subtítulo**: "Lab. Cultivos Crustáceos - UCN"
+- **Descripción**: Sistema de monitoreo IoT para el Laboratorio de Cultivos de Crustáceos
+
+### Archivos Modificados
+- `modules/auth.py`: Sistema completo de autenticación
+- `modules/styles.py`: Header con nuevo nombre
+- `Home.py`: Botón Salir en navbar, page_title actualizado
+- `README.md`: Documentación completa actualizada
+- `docs/MANUAL_USUARIO.md`: Manual con sección de login
+- `.env.example`: Título actualizado
+- `.streamlit/secrets.toml.example`: Título actualizado
+
+### Archivos Nuevos
+- `scripts/generate_password_hash.py`: Generador de hash bcrypt
+
+---
+
+## 📋 Versión 3.1.0 (Anterior)
+
 
 ## 📋 Descripción del Commit
 ```

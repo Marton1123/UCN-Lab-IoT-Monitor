@@ -41,7 +41,8 @@ def render_navigation():
             'configuracion': 'Configuracion'
         }
         
-        cols = st.columns(len(menu_options))
+        # 4 columnas para navegación + 1 columna pequeña para Salir
+        cols = st.columns([1, 1, 1, 1, 0.4])
         
         for idx, (page_key, page_label) in enumerate(menu_options.items()):
             with cols[idx]:
@@ -50,11 +51,18 @@ def render_navigation():
                     page_label,
                     key=f"nav_{page_key}",
                     type='primary' if is_active else 'secondary',
-                    width="stretch"
+                    use_container_width=True
                 ):
                     st.session_state.current_page = page_key
                     st.query_params["page"] = page_key
                     st.rerun()
+        
+        # Botón Salir en la última columna
+        with cols[4]:
+            if st.button("Salir", key="logout_btn", type="secondary", use_container_width=True):
+                from modules import auth
+                auth.logout()
+
 
 
 def route_to_page():
@@ -72,11 +80,17 @@ def route_to_page():
 
 def main():
     st.set_page_config(
-        page_title="Core-IoT-Monitor",
+        page_title="Monitor Biofloc",
         page_icon=None,
         layout="wide",
         initial_sidebar_state="collapsed"
     )
+    
+    # Middleware de autenticación - SIEMPRE REQUERIDO
+    from modules import auth
+    if not auth.is_authenticated():
+        auth.render_login_page()
+        return  # Detiene ejecución si no está autenticado
     
     apply_custom_styles()
     initialize_session_state()

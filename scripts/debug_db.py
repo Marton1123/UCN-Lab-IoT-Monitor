@@ -27,9 +27,6 @@ def debug_database():
     uri = os.getenv('MONGO_URI')
     print(f"MONGO_URI: {uri[:20] + '...' if uri else 'NO DEFINIDO'}")
     
-    uri2 = os.getenv('MONGO_URI_2')
-    print(f"MONGO_URI_2: {uri2[:20] + '...' if uri2 else 'NO DEFINIDO'}")
-    
     if not uri:
         print("CRITICAL: No se pudo cargar MONGO_URI. Abortando test de conexión.")
         return

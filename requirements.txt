@@ -1,4 +1,4 @@
-# Biofloc Monitor UCN - Dependencies
+# Monitor Biofloc - Lab. Cultivos Crustáceos UCN
 # Python 3.10+ required
 
 # Web Framework
@@ -20,3 +20,6 @@ plotly>=5.18.0
 
 # Excel Export
 openpyxl>=3.1.0
+
+# Authentication
+bcrypt>=4.0.0
