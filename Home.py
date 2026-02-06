@@ -88,6 +88,7 @@ def main():
     
     # Middleware de autenticación - SIEMPRE REQUERIDO
     from modules import auth
+    auth.init_session_check()  # Verificar sesión persistente en localStorage
     if not auth.is_authenticated():
         auth.render_login_page()
         return  # Detiene ejecución si no está autenticado

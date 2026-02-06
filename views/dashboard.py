@@ -207,7 +207,7 @@ except ImportError:
             return func
 
 
-@fragment
+@fragment(run_every=120)
 def render_live_device_card(device_obj: DeviceInfo, thresholds: Dict, config_manager: ConfigManager):
     """
     Renderiza la tarjeta con actualizacion PARCIAL gracias a @fragment.
@@ -216,13 +216,49 @@ def render_live_device_card(device_obj: DeviceInfo, thresholds: Dict, config_man
     dev_id = device_obj.device_id
     state_key = f"live_data_{dev_id}"
     page_key = f"sensor_page_{dev_id}"
+    last_update_key = f"last_fetch_{dev_id}"
     
     # Inicializar estados
     if state_key not in st.session_state:
         st.session_state[state_key] = device_obj
     if page_key not in st.session_state:
         st.session_state[page_key] = 0
+    if last_update_key not in st.session_state:
+        st.session_state[last_update_key] = datetime.now().timestamp()
+
+    # --- HELPER DE ACTUALIZACIÓN ---
+    def fetch_latest_data():
+        try:
+            db = DatabaseConnection()
+            new_df = db.get_latest_for_single_device(dev_id)
+            if not new_df.empty:
+                cfg = ConfigManager(db)
+                # Recalcular estados con configuración fresca
+                global_thresholds = cfg.get_all_configured_sensors()
+                all_meta = cfg.get_device_metadata()
+                dev_specifics = {k: v.get('thresholds', {}) for k, v in all_meta.items()}
+                prev_states = st.session_state.get('device_health_states', {})
+                
+                mgr = DeviceManager(global_thresholds, prev_states, dev_specifics)
+                new_infos = mgr.get_all_devices_info(new_df)
+                
+                if new_infos:
+                    st.session_state[state_key] = new_infos[0]
+                    st.session_state[last_update_key] = datetime.now().timestamp()
+                    return True
+        except Exception as e:
+            print(f"Error refreshing {dev_id}: {e}")
+        return False
     
+    # 1. Lógica de Auto-Refresh (TIEMPO): Ejecutar ANTES de renderizar
+    now_ts = datetime.now().timestamp()
+    time_diff = now_ts - st.session_state[last_update_key]
+    
+    # Si pasaron > 115s (margen para el timer de 120s), actualizamos YA
+    if time_diff > 115:
+        fetch_latest_data()
+    
+    # --- RENDER HTML DE LA TARJETA (Con datos frescos) ---
     current_device = st.session_state[state_key]
     current_page = st.session_state[page_key]
     
@@ -231,12 +267,11 @@ def render_live_device_card(device_obj: DeviceInfo, thresholds: Dict, config_man
     sensors_per_page = 4
     total_pages = max(1, (total_sensors + sensors_per_page - 1) // sensors_per_page)
     
-    # Auto-correccion de pagina si excede limites (evita paginas en blanco)
+    # Auto-correccion de pagina
     if current_page >= total_pages:
         current_page = 0
         st.session_state[page_key] = 0
-    
-    # --- RENDER HTML DE LA TARJETA ---
+            
     raw_html = build_card_html(
         current_device, 
         thresholds, 
@@ -247,56 +282,27 @@ def render_live_device_card(device_obj: DeviceInfo, thresholds: Dict, config_man
     st.markdown(clean_html(raw_html), unsafe_allow_html=True)
     
     # --- BARRA DE CONTROLES ---
+    refresh_clicked = False
+    
     if total_pages > 1:
-        # Layout de 3 columnas para navegacion
         c1, c2, c3 = st.columns([1, 4, 1])
-        
-        # Boton Anterior
         with c1:
             disable_prev = current_page <= 0
             if st.button("◀", key=f"prev_{dev_id}", disabled=disable_prev, width="stretch"):
-                new_page = max(0, current_page - 1)
-                st.session_state[page_key] = new_page
-                
-        # Boton Actualizar (Centro)
+                st.session_state[page_key] = max(0, current_page - 1)
         with c2:
-            refresh = st.button("Actualizar", key=f"refresh_{dev_id}", width="stretch")
-            
-        # Boton Siguiente
+            refresh_clicked = st.button("Actualizar", key=f"refresh_{dev_id}", width="stretch")
         with c3:
             disable_next = current_page >= total_pages - 1
             if st.button("▶", key=f"next_{dev_id}", disabled=disable_next, width="stretch"):
-                new_page = min(total_pages - 1, current_page + 1)
-                st.session_state[page_key] = new_page
+                st.session_state[page_key] = min(total_pages - 1, current_page + 1)
     else:
-        # Sin paginacion: solo actualizar
-        refresh = st.button("Actualizar", key=f"refresh_{dev_id}", width="stretch")
-    
-    # --- LOGICA DE REFRESH ---
-    if refresh:
-        try:
-            db = DatabaseConnection()
-            new_df = db.get_latest_for_single_device(dev_id)
-            if not new_df.empty:
-                cfg = ConfigManager(db)
-                # 1. Obtener umbrales globales
-                global_thresholds = cfg.get_all_configured_sensors()
-                
-                # 2. Obtener umbrales ESPECIFICOS del dispositivo
-                all_meta = cfg.get_device_metadata()
-                dev_specifics = {k: v.get('thresholds', {}) for k, v in all_meta.items()}
-                
-                # 3. Recuperar estados previos para evitar flasheos
-                prev_states = st.session_state.get('device_health_states', {})
-                
-                # 4. Crear DeviceManager con TODA la configuracion
-                mgr = DeviceManager(global_thresholds, prev_states, dev_specifics)
-                
-                new_infos = mgr.get_all_devices_info(new_df)
-                if new_infos:
-                    st.session_state[state_key] = new_infos[0]
-        except Exception as e:
-            st.toast(f"Error: {e}")
+        refresh_clicked = st.button("Actualizar", key=f"refresh_{dev_id}", width="stretch")
+
+    # 2. Lógica de Refresh MANUAL
+    if refresh_clicked:
+        if fetch_latest_data():
+            st.rerun()
 
 
 def render_device_grid(devices, thresholds, config_manager=None):

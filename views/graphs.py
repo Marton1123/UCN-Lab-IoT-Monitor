@@ -43,6 +43,8 @@ ICON_CLIPBOARD = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14"
 
 ICON_LIGHTBULB = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 4px;"><line x1="9" y1="18" x2="15" y2="18"></line><line x1="10" y1="22" x2="14" y2="22"></line><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"></path></svg>'
 
+ICON_CLOCK = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 6px;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>'
+
 # Mapa de normalizacion de nombres de sensores (diferentes esquemas -> nombre estandar)
 SENSOR_ALIASES = {
     # Temperatura
@@ -122,13 +124,14 @@ def get_sensor_display_info(sensor_name: str, sensor_config: dict) -> tuple:
 # ARQUITECTURA OPTIMIZADA: Carga completa + Cache + Filtrado en memoria
 # =============================================================================
 
-# TTL de 24 horas (86400 segundos) para evitar recargas constantes
+# TTL de 1 hora (3600 segundos) - balance entre performance y datos frescos
+# La carga de datos tarda ~4 minutos, así que un TTL corto no es práctico
 # El usuario puede forzar la recarga con el botón "Actualizar"
-@st.cache_data(ttl=86400, show_spinner=False)
+@st.cache_data(ttl=3600, show_spinner=False)
 def cargar_historial_completo() -> pd.DataFrame:
     """
     Carga TODO el historial de datos sin límite.
-    Esta función se cachea por 24 HORAS para evitar recargas innecesarias.
+    Esta función se cachea por 1 HORA para evitar recargas constantes.
     
     Para obtener datos nuevos, el usuario debe presionar "Actualizar".
     
@@ -388,17 +391,16 @@ def show_view():
     fecha_min_data = df_completo['timestamp'].min()
     fecha_max_data = df_completo['timestamp'].max()
     
-    # --- FILTROS EN CONTENEDOR ---
-    with st.container(border=True):
-        st.markdown(f"<div style='margin-bottom: 10px; font-weight: 600; color: #475569;'>{ICON_SETTINGS} Configuración de Visualización</div>", unsafe_allow_html=True)
-        
-        # Info del dataset cargado
-        st.markdown(f"<span style='font-size: 0.85rem; color: #64748b;'>{ICON_DATABASE} Dataset: {total_registros:,} registros | Desde: {fecha_min_data.strftime('%d/%m/%Y %H:%M') if pd.notna(fecha_min_data) else 'N/A'}</span>", unsafe_allow_html=True)
-        
-        c_time, c_dev, c_param = st.columns([1, 1, 1])
-        
-        # Opciones de tiempo (sin límites de datos, solo deltas)
-        with c_time:
+    # --- DOS CONTENEDORES EN PARALELO ---
+    col_tiempo, col_filtros = st.columns([1, 2])
+    
+    # ========================================
+    # CAJA 1: Selector de tiempo (auto-actualiza)
+    # ========================================
+    with col_tiempo:
+        with st.container(border=True):
+            st.markdown(f"<div style='font-weight: 600; color: #475569; margin-bottom: 8px;'>{ICON_CLOCK} Rango de Tiempo</div>", unsafe_allow_html=True)
+            
             time_options = {
                 "5 Minutos": timedelta(minutes=5),
                 "30 Minutos": timedelta(minutes=30),
@@ -410,183 +412,162 @@ def show_view():
             }
             time_keys = list(time_options.keys())
             
-            # Inicializar session_state para el widget de tiempo
             if 'graphs_time_selector' not in st.session_state:
                 st.session_state.graphs_time_selector = "5 Minutos"
             
-            # Calcular índice seguro
             try:
                 current_index = time_keys.index(st.session_state.graphs_time_selector)
             except ValueError:
                 current_index = 0
             
             selected_range = st.selectbox(
-                "Rango de Tiempo", 
+                "Seleccionar rango", 
                 time_keys, 
                 index=current_index,
-                key="graphs_time_selector"
+                key="graphs_time_selector",
+                label_visibility="collapsed"
             )
             delta = time_options[selected_range]
-        
-        # Obtener dispositivos disponibles del historial
+            
+            # Info del dataset y espaciado vertical para igualar altura
+            st.markdown(f"""
+                <div style='margin-top: 20px;'>
+                    <span style='font-size: 0.8rem; color: #64748b;'>{ICON_DATABASE} {total_registros:,} registros</span>
+                </div>
+                <div style='margin-top: 8px;'>
+                    <span style='font-size: 0.75rem; color: #94a3b8;'>{ICON_INFO} Cambiar actualiza automáticamente</span>
+                </div>
+            """, unsafe_allow_html=True)
+    
+    # ========================================
+    # CAJA 2: Form de dispositivos y parámetros (sin parpadeo)
+    # ========================================
+    with col_filtros:
+        # --- Preparar datos para dispositivos ---
         all_devices = sorted(df_completo['device_id'].unique().tolist())
         
-        # Obtener estado actual de conexión de los dispositivos usando DeviceManager
         try:
             latest_df = db.get_latest_by_device()
             if latest_df is not None and not latest_df.empty:
-                # Usar DeviceManager para evaluar el estado de conexión real
                 device_manager = DeviceManager({}, {})
                 all_devices_info = device_manager.get_all_devices_info(latest_df)
-                # Solo incluir dispositivos que NO estén offline
                 online_device_ids = set([d.device_id for d in all_devices_info if d.connection != ConnectionStatus.OFFLINE])
             else:
                 online_device_ids = set()
         except Exception as e:
             print(f"[graphs.py] Error obteniendo estado de dispositivos: {e}")
-            online_device_ids = set(all_devices)  # Fallback: asumir que todos están online si falla
+            online_device_ids = set(all_devices)
         
         def get_device_alias(dev_id):
-            """Obtiene el alias del dispositivo o retorna None si no hay alias."""
             meta = device_metadata.get(dev_id, {})
             return meta.get('alias', None)
         
         def has_configured_alias(dev_id):
-            """Verifica si el dispositivo tiene un alias configurado."""
             return get_device_alias(dev_id) is not None
         
         def is_device_online(dev_id):
-            """Verifica si el dispositivo está online actualmente."""
             return dev_id in online_device_ids
         
-        # Filtrar: solo dispositivos con alias configurado Y online (excluir offline y desconocidos)
         devices = [dev_id for dev_id in all_devices if has_configured_alias(dev_id) and is_device_online(dev_id)]
-        
-        # Si no hay dispositivos con alias online, mostrar todos los que tienen alias (fallback)
         if not devices:
             devices = [dev_id for dev_id in all_devices if has_configured_alias(dev_id)]
-        
-        # Si aún no hay dispositivos, mostrar todos (fallback final)
         if not devices:
             devices = all_devices
         
-        # Crear mapeo ID -> Alias para mostrar
         device_display_map = {dev_id: get_device_alias(dev_id) or dev_id for dev_id in devices}
-        
-        # Leer device_id de la URL
         url_device_id = st.query_params.get("device_id", None)
         
-        # =====================================================================
-        # MANEJO DE ESTADO: Preservar selecciones del usuario
-        # Usamos 'default' para la primera carga, sin key (evita conflictos)
-        # =====================================================================
-        
-        # Calcular default inicial para dispositivos
+        # Defaults para dispositivos
         default_devices = None
         if url_device_id and url_device_id in devices:
-            # Si viene desde el dashboard, precargar ese dispositivo
             default_devices = [url_device_id]
         elif 'graphs_prev_devices' in st.session_state:
-            # Si ya se buscó antes, usar la selección previa
             prev = st.session_state.graphs_prev_devices
             valid_prev = [d for d in prev if d in devices]
             default_devices = valid_prev if valid_prev else None
         
-        with c_dev:
-            selected_devices = st.multiselect(
-                "Dispositivos", 
-                devices, 
-                default=default_devices,
-                format_func=lambda x: device_display_map.get(x, x),
-                key="graphs_device_multiselect",
-                placeholder="Seleccionar dispositivos..."
-            )
-        
-        # Filtrar para obtener parámetros disponibles
+        # Parámetros disponibles
         excluded = ['timestamp', 'device_id', 'location', 'id', '_id', 'lat', 'lon', 'device_name']
         numeric_cols = df_completo.select_dtypes(include=['number']).columns
-        params = [c for c in numeric_cols if c not in excluded]
+        available_params = [c for c in numeric_cols if c not in excluded]
         
-        # Filtrar parámetros disponibles para dispositivos seleccionados
-        available_params = []
-        if selected_devices:
-            subset_df = df_completo[df_completo['device_id'].isin(selected_devices)]
-            for col in params:
-                if col in subset_df.columns and subset_df[col].notna().any():
-                    available_params.append(col)
-        else:
-            available_params = params
-        
-        # Calcular default inicial para parámetros
+        # Defaults para parámetros
         default_params = None
         if url_device_id and url_device_id in devices:
-            # Si viene desde dashboard, seleccionar primeros parámetros disponibles
             default_params = available_params[:min(2, len(available_params))]
         elif 'graphs_prev_params' in st.session_state:
-            # Si ya se buscó antes, usar la selección previa
             prev = st.session_state.graphs_prev_params
             valid_prev = [p for p in prev if p in available_params]
             default_params = valid_prev if valid_prev else None
         
-        with c_param:
-            selected_params = st.multiselect(
-                "Parámetros", 
-                available_params, 
-                default=default_params,
-                format_func=lambda x: get_sensor_display_info(x, sensor_config)[0],
-                key="graphs_param_multiselect",
-                placeholder="Seleccionar parámetros..."
-            )
-        
-        # NUEVO: Botón para generar gráficas (modo manual como history)
-        st.markdown("<br>", unsafe_allow_html=True)
-        
-        c_btn1, c_btn2 = st.columns([1, 4])
-        with c_btn1:
-            ver_graficas = st.button("VER GRÁFICAS", type="primary", use_container_width=True)
-        with c_btn2:
-            pass  # Espacio vacío
+        # Form con borde propio (NO causa parpadeo al seleccionar)
+        with st.form(key="graphs_filter_form", border=True):
+            st.markdown(f"<div style='font-weight: 600; color: #475569; margin-bottom: 8px;'>{ICON_SETTINGS} Filtros de Visualización</div>", unsafe_allow_html=True)
+            
+            c_dev, c_param = st.columns([1, 1])
+            
+            with c_dev:
+                selected_devices = st.multiselect(
+                    "Dispositivos", 
+                    devices, 
+                    default=default_devices,
+                    format_func=lambda x: device_display_map.get(x, x),
+                    key="graphs_device_multiselect",
+                    placeholder="Seleccionar dispositivos..."
+                )
+            
+            with c_param:
+                selected_params = st.multiselect(
+                    "Parámetros", 
+                    available_params, 
+                    default=default_params,
+                    format_func=lambda x: get_sensor_display_info(x, sensor_config)[0],
+                    key="graphs_param_multiselect",
+                    placeholder="Seleccionar parámetros..."
+                )
+            
+            ver_graficas = st.form_submit_button("VER GRÁFICAS", type="primary")
     
     # =====================================================================
     # INICIALIZAR ESTADO DE SESIÓN
     # =====================================================================
     if 'graphs_data_loaded' not in st.session_state:
         st.session_state.graphs_data_loaded = None
-    if 'graphs_last_params' not in st.session_state:
-        st.session_state.graphs_last_params = None
-    if 'graphs_has_searched' not in st.session_state:
-        st.session_state.graphs_has_searched = False  # Controla si el usuario ya hizo una búsqueda
+    if 'graphs_last_delta' not in st.session_state:
+        st.session_state.graphs_last_delta = None
     
-    # Parámetros actuales
-    current_params = (tuple(sorted(selected_devices)) if selected_devices else (), 
-                      tuple(sorted(selected_params)) if selected_params else (), 
-                      delta)
+    # Detectar si cambió el rango de tiempo
+    delta_changed = st.session_state.graphs_last_delta is not None and st.session_state.graphs_last_delta != delta
     
-    # Detectar si cambió algo
-    params_changed = st.session_state.graphs_last_params != current_params
-    
-    # Decidir si regenerar gráficas automáticamente
+    # Decidir si regenerar gráficas
     should_regenerate = False
     
-    # Al hacer clic en "VER GRÁFICAS" (primera búsqueda o búsqueda manual)
+    # Caso 1: Usuario hizo clic en "VER GRÁFICAS"
     if ver_graficas:
         if not selected_devices or not selected_params:
             st.warning("Por favor selecciona al menos un dispositivo y un parámetro.")
         else:
             should_regenerate = True
-            st.session_state.graphs_has_searched = True  # Marcar que ya se hizo una búsqueda
+            # Guardar selección actual para usar en auto-regeneración
+            st.session_state.graphs_prev_devices = selected_devices
+            st.session_state.graphs_prev_params = selected_params
     
-    # Auto-regenerar si ya se buscó antes Y los parámetros cambiaron
-    elif st.session_state.graphs_has_searched and params_changed and selected_devices and selected_params:
-        should_regenerate = True
+    # Caso 2: Usuario cambió el rango de tiempo Y ya había hecho una búsqueda antes
+    elif delta_changed and 'graphs_prev_devices' in st.session_state and 'graphs_prev_params' in st.session_state:
+        # Usar la selección guardada de la última búsqueda exitosa
+        prev_devices = st.session_state.graphs_prev_devices
+        prev_params = st.session_state.graphs_prev_params
+        if prev_devices and prev_params:
+            should_regenerate = True
+            # Usar los mismos dispositivos/parámetros de la última búsqueda
+            selected_devices = prev_devices
+            selected_params = prev_params
+    
+    # Siempre guardar el delta actual
+    st.session_state.graphs_last_delta = delta
     
     # Regenerar gráficas si es necesario
     if should_regenerate:
-        # Guardar selección actual
-        st.session_state.graphs_prev_devices = selected_devices
-        st.session_state.graphs_prev_params = selected_params
-        st.session_state.graphs_last_params = current_params
-        
         # Filtrar datos
         with st.spinner("Generando gráficas..."):
             filtered_df = filtrar_dataframe(df_completo, selected_devices, delta, debug=False)

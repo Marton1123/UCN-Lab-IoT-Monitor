@@ -40,6 +40,11 @@ def logout():
     st.rerun()
 
 
+def init_session_check():
+    """Función de compatibilidad - no hace nada en esta versión."""
+    pass
+
+
 def render_login_page():
     """
     Renderiza la pantalla de login minimalista.
@@ -169,4 +174,3 @@ def render_login_page():
             </p>
         </div>
     """, unsafe_allow_html=True)
-
