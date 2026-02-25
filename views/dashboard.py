@@ -161,6 +161,12 @@ def show_view():
             
             all_devices = device_manager.get_all_devices_info(df)
             st.session_state['device_health_states'] = device_manager.get_health_states()
+            
+            # CRÍTICO: Propagar estados frescos al session_state ANTES de que los
+            # fragmentos rendericen. Sin esto, los fragmentos pueden mostrar
+            # estados obsoletos de una iteración anterior (bug de color incorrecto).
+            for _dev in all_devices:
+                st.session_state[f'live_data_{_dev.device_id}'] = _dev
 
     except Exception as e:
         st.error(f"Error fetching devices: {str(e)}")
@@ -218,13 +224,16 @@ def render_live_device_card(device_obj: DeviceInfo, thresholds: Dict, config_man
     page_key = f"sensor_page_{dev_id}"
     last_update_key = f"last_fetch_{dev_id}"
     
-    # Inicializar estados
-    if state_key not in st.session_state:
-        st.session_state[state_key] = device_obj
+    # state_key ya fue escrito por show_view() con el cálculo fresco antes de llegar aquí.
+    # Solo inicializamos page_key y last_update_key si es la primera vez.
     if page_key not in st.session_state:
         st.session_state[page_key] = 0
     if last_update_key not in st.session_state:
         st.session_state[last_update_key] = datetime.now().timestamp()
+    # Fallback: si por alguna razón show_view() no pudo escribirlo (ej: error de DB),
+    # usamos el device_obj que recibimos como parámetro.
+    if state_key not in st.session_state:
+        st.session_state[state_key] = device_obj
 
     # --- HELPER DE ACTUALIZACIÓN ---
     def fetch_latest_data():

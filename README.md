@@ -5,50 +5,51 @@
 ![Python](https://img.shields.io/badge/Python-3.10+-blue?logo=python&logoColor=white)
 ![Streamlit](https://img.shields.io/badge/Streamlit-1.36+-red?logo=streamlit&logoColor=white)
 ![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-green?logo=mongodb&logoColor=white)
-![ROS 2](https://img.shields.io/badge/ROS_2-Jazzy-22314E?logo=ros&logoColor=white)
+![Version](https://img.shields.io/badge/Versión-4.1.0-informational)
 
-**Sistema de monitoreo IoT y telemetría para el Laboratorio de Cultivos de Crustáceos, Juveniles y Reproductores (UCN). Dashboard personalizado para control de parámetros en sistemas Biofloc.**
+**Plataforma de monitoreo IoT para parámetros fisicoquímicos en sistemas Biofloc.**
 
-[Manual de Usuario](docs/MANUAL_USUARIO.md) · [Reportar Bug](https://github.com/Marton1123/UCN-Lab-IoT-Monitor/issues)
+[📖 Manual de Usuario](docs/MANUAL_USUARIO.md) · [🐛 Reportar Issue](https://github.com/Marton1123/UCN-Lab-IoT-Monitor/issues) · [👤 Autor](https://github.com/Marton1123)
 
 </div>
+
 
 ---
 
 ## 📋 Descripción
 
-**Monitor Biofloc** es una plataforma de monitoreo IoT diseñada para el Laboratorio de Cultivos de Crustáceos del Departamento de Acuicultura de la Universidad Católica del Norte (UCN). 
+**Monitor Biofloc** es una aplicación web construida con Streamlit que consolida datos de telemetría provenientes de dispositivos IoT (nodos ESP32/Micro-ROS) hacia una base de datos MongoDB Atlas. Permite supervisar en tiempo real los parámetros fisicoquímicos críticos (temperatura, pH, oxígeno disuelto, etc.) dentro de sistemas Biofloc.
 
-Proporciona supervisión en tiempo real de parámetros fisicoquímicos críticos (pH, oxígeno disuelto, temperatura, salinidad, etc.) en sistemas Biofloc.
+---
 
-### ✨ Funcionalidades Principales
+## ✨ Funcionalidades
 
-| Función | Descripción |
-|---------|-------------|
-| **🔐 Autenticación Segura** | Login obligatorio con bcrypt, botón de cerrar sesión en navbar |
-| **📊 Dashboard en Tiempo Real** | Visualización de estado de dispositivos con actualización automática |
-| **🚦 Sistema de Alertas** | Semaforización automática (Normal/Alerta/Crítico) con umbrales configurables |
-| **📈 Gráficas Adaptativas** | Análisis de tendencias con filtrado de outliers |
-| **📥 Exportación Universal** | Descarga de históricos en Excel (.xlsx) y CSV |
-| **🔄 Registry-First Strategy** | Visualización de dispositivos inactivos con último estado conocido |
+| Módulo | Funcionalidad |
+|--------|---------------|
+| **🔐 Autenticación** | Login obligatorio con bcrypt, sesión persistente, botón de cierre de sesión |
+| **📊 Dashboard** | Tarjetas de dispositivo con estado en tiempo real, KPIs resumen, filtros avanzados |
+| **🚦 Sistema de Alertas** | Semaforización automática Normal / Alerta / Crítico con umbrales configurables por dispositivo |
+| **📈 Gráficas** | Análisis de tendencias multi-sensor, filtrado de outliers, SMA, rango temporal configurable |
+| **📥 Historial** | Consulta histórica con filtros, exportación a Excel (.xlsx) y CSV |
+| **⚙️ Configuración** | Alias, ubicación y umbrales de alerta editables por dispositivo desde la UI |
 
 ---
 
 ## 🏗️ Arquitectura
 
 ```
-┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
-│  Nodos ROS 2    │────▶│  MongoDB Atlas   │◀────│ Monitor Biofloc │
-│  (Micro-ROS)    │     │   (Base Datos)   │     │   (Streamlit)   │
-└─────────────────┘     └──────────────────┘     └─────────────────┘
+┌────────────────────┐      ┌──────────────────────┐      ┌──────────────────────┐
+│  Dispositivos IoT  │─────▶│    MongoDB Atlas      │◀─────│   Monitor Biofloc    │
+│  (ESP32 / ROS 2)   │      │  BioFloc_Monitoring   │      │     (Streamlit)      │
+└────────────────────┘      └──────────────────────┘      └──────────────────────┘
 ```
 
-**Stack Tecnológico:**
-- **Frontend**: Streamlit 1.36+
-- **Backend**: Python 3.10+, PyMongo
-- **Base de Datos**: MongoDB Atlas
-- **Visualización**: Plotly Express
-- **Seguridad**: bcrypt (password hashing)
+**Stack tecnológico:**
+- **Framework**: Streamlit 1.36+
+- **Lenguaje**: Python 3.10+
+- **Base de datos**: MongoDB Atlas (PyMongo)
+- **Visualización**: Plotly
+- **Seguridad**: bcrypt
 
 ---
 
@@ -56,68 +57,102 @@ Proporciona supervisión en tiempo real de parámetros fisicoquímicos críticos
 
 ```
 UCN-Lab-IoT-Monitor/
-├── Home.py                      # Punto de entrada principal + navegación
-├── requirements.txt             # Dependencias del proyecto
-├── .env                         # Variables de entorno (NO en git)
-├── .env.example                 # Plantilla de configuración
-├── .gitignore                   # Archivos excluidos de git
-├── README.md                    # Este archivo
-├── COMMIT_SUMMARY.md            # Historial detallado de cambios
+│
+├── Home.py                          # Punto de entrada: autenticación, navegación y routing
+├── requirements.txt                 # Dependencias Python
+├── .env                             # Variables de entorno locales (NO en git)
+├── .env.example                     # Plantilla de configuración
+├── .gitignore
+├── README.md
+├── CHANGELOG.md                     # Historial de versiones
 │
 ├── .streamlit/
-│   ├── config.toml              # Configuración de Streamlit
-│   ├── secrets.toml             # Secretos locales (NO en git)
-│   └── secrets.toml.example     # Plantilla de secretos
+│   ├── config.toml                  # Configuración de tema Streamlit
+│   ├── secrets.toml                 # Secretos para deploy en Streamlit Cloud (NO en git)
+│   └── secrets.toml.example         # Plantilla de secretos para deploy
 │
-├── modules/                     # Lógica de negocio
-│   ├── auth.py                  # Sistema de autenticación (login/logout)
-│   ├── database.py              # Conexión multi-fuente MongoDB
-│   ├── device_manager.py        # Evaluación de estado de dispositivos
-│   ├── config_manager.py        # Gestión de configuración y umbrales
-│   ├── sensor_registry.py       # Registro dinámico de sensores
-│   └── styles.py                # Estilos CSS y header del dashboard
+├── modules/                         # Lógica de negocio
+│   ├── auth.py                      # Login / logout con bcrypt
+│   ├── database.py                  # Conexión MongoDB, normalización multi-esquema
+│   ├── device_manager.py            # Evaluación de estado y salud de dispositivos
+│   ├── config_manager.py            # Gestión de umbrales y metadatos de dispositivos
+│   ├── sensor_registry.py           # Registro dinámico de sensores desde sensor_defaults.json
+│   └── styles.py                    # CSS global y componente header
 │
-├── views/                       # Vistas de la aplicación
-│   ├── __init__.py              # Inicializador del paquete
-│   ├── dashboard.py             # Dashboard principal con tarjetas
-│   ├── graphs.py                # Gráficas interactivas con Plotly
-│   ├── history.py               # Historial y exportación de datos
-│   └── settings.py              # Configuración de sensores y umbrales
-│
-├── scripts/                     # Scripts de utilidad
-│   ├── generate_password_hash.py  # Generador de hash bcrypt
-│   ├── mock_data_generator.py     # Generador de datos de prueba
-│   ├── debug_db.py                # Debugging de MongoDB
-│   ├── test_normalization.py      # Test de normalización multi-esquema
-│   └── export_to_excel.py         # Exportación a Excel
+├── views/                           # Vistas de la aplicación (una por página)
+│   ├── __init__.py
+│   ├── dashboard.py                 # Vista principal con tarjetas de dispositivo
+│   ├── graphs.py                    # Gráficas históricas con Plotly
+│   ├── history.py                   # Tabla de datos históricos y exportación
+│   └── settings.py                  # Configuración de alias, ubicación y umbrales
 │
 ├── config/
-│   └── sensor_defaults.json     # Valores por defecto de sensores
+│   └── sensor_defaults.json         # Rangos y metadatos por defecto para cada tipo de sensor
+│
+├── scripts/                         # Utilidades de desarrollo y mantenimiento
+│   ├── generate_password_hash.py    # Generador de hash bcrypt para APP_PASSWORD_HASH
+│   ├── mock_data_generator.py       # Generador de datos de prueba para desarrollo
+│   ├── debug_db.py                  # Herramienta de inspección de MongoDB
+│   ├── test_normalization.py        # Tests de normalización multi-esquema
+│   └── export_to_excel.py           # Exportación directa a Excel sin la UI
 │
 ├── assets/
-│   ├── Logo-Acuicultura.png     # Logo del Departamento de Acuicultura
+│   └── Logo-Acuicultura.png         # Logo del Depto. de Acuicultura UCN
 │
 └── docs/
-    └── MANUAL_USUARIO.md        # Manual de usuario completo
+    └── MANUAL_USUARIO.md            # Manual de uso para el personal del laboratorio
 ```
 
 ---
 
-## 🚀 Instalación
+## 🗄️ Esquema de Base de Datos
+
+El sistema trabaja con dos colecciones en MongoDB Atlas:
+
+### `sensor_data` — Telemetría de sensores
+```json
+{
+  "timestamp": { "$date": "2026-02-25T15:51:09.557Z" },
+  "dispositivo_id": "34865D46A848",
+  "datos": {
+    "temperatura": 23.21,
+    "ph": 4.08
+  }
+}
+```
+
+### `devices_data` — Registro y configuración de dispositivos
+```json
+{
+  "_id": "34865D46A848",
+  "nombre": "Dispositivo 5D46A848",
+  "estado": "pendiente",
+  "ubicacion": null,
+  "configuracion": { "intervalo_lectura_seg": 60, "sensores_habilitados": ["ph", "temperatura"] },
+  "calibracion": { "ph_offset": 0, "temp_offset": 0 },
+  "conexion": { "primera": "...", "ultima": "...", "total_lecturas": 2 }
+}
+```
+
+> El normalizador multi-esquema en `database.py` soporta ambos formatos (campos en español e inglés) de forma transparente.
+
+---
+
+## 🚀 Instalación y Ejecución
 
 ### Prerrequisitos
 
-- Python 3.10+ (recomendado: [Anaconda](https://www.anaconda.com/download))
-- Cuenta en [MongoDB Atlas](https://www.mongodb.com/cloud/atlas)
+- Python 3.10+ — se recomienda [Anaconda](https://www.anaconda.com/download)
+- Acceso a un cluster de [MongoDB Atlas](https://www.mongodb.com/cloud/atlas)
 
-### 1. Clonar el Repositorio
+### 1. Clonar el repositorio
 
 ```bash
 git clone https://github.com/Marton1123/UCN-Lab-IoT-Monitor.git
 cd UCN-Lab-IoT-Monitor
 ```
 
-### 2. Crear Entorno Virtual
+### 2. Crear y activar el entorno
 
 ```bash
 conda create --name biofloc_monitor python=3.10 -y
@@ -125,28 +160,26 @@ conda activate biofloc_monitor
 pip install -r requirements.txt
 ```
 
-### 3. Configurar Variables de Entorno
+### 3. Configurar variables de entorno
 
-Copia `.env.example` a `.env` y configura:
+Copia `.env.example` a `.env` y rellena con tus credenciales:
 
 ```ini
-# Base de Datos MongoDB
 MONGO_URI=mongodb+srv://<usuario>:<password>@<cluster>.mongodb.net/
-MONGO_DB=BioflocDB
-MONGO_COLLECTION=telemetria
-MONGO_DEVICES_COLLECTION=devices
+MONGO_DB=BioFloc_Monitoring
+MONGO_COLLECTION=sensor_data
+MONGO_DEVICES_COLLECTION=devices_data
 
-# Autenticación (OBLIGATORIO)
-APP_PASSWORD_HASH=$2b$12$...hash_generado...
+APP_PASSWORD_HASH=$2b$12$...  # ver paso 4
 ```
 
-### 4. Configurar Contraseña de Acceso
+### 4. Generar hash de contraseña
 
 ```bash
 python -m scripts.generate_password_hash "TuContraseñaSegura"
 ```
 
-Copia el hash generado al archivo `.env`.
+Copia el hash resultante a `APP_PASSWORD_HASH` en el `.env`.
 
 ### 5. Ejecutar
 
@@ -154,102 +187,65 @@ Copia el hash generado al archivo `.env`.
 streamlit run Home.py
 ```
 
-Accede a `http://localhost:8501`
-
----
-
-## 🔐 Sistema de Autenticación
-
-| Característica | Descripción |
-|---|---|
-| **Login obligatorio** | Pantalla de acceso antes del dashboard |
-| **Password hashing** | bcrypt con 12 rounds |
-| **Botón Salir** | En el navbar, cierra sesión |
-| **Enter para login** | Formulario con soporte de Enter |
-| **Diseño unificado** | UI consistente con el dashboard |
-
----
-
-## 📊 Vistas de la Aplicación
-
-### 🏠 Dashboard (Inicio)
-- Tarjetas de dispositivos con estado (Normal/Alerta/Crítico/Offline)
-- Métricas resumen (Total, En Línea, Offline, OK, Alerta, Crítico)
-- Filtros por estado, ubicación y alias
-- Actualización parcial por tarjeta
-
-### 📈 Gráficas
-- Visualización histórica multi-sensor
-- Filtrado automático de outliers
-- Selector de rango de fechas
-- Zoom, pan y exportación
-
-### 📥 Datos (Historial)
-- Tabla completa de lecturas
-- Exportación Excel/CSV
-- Filtros por dispositivo y fecha
-
-### ⚙️ Configuración
-- Alias y ubicaciones de dispositivos
-- Umbrales de alerta personalizables
-- Configuración por sensor
+Accede en `http://localhost:8501`
 
 ---
 
 ## ☁️ Deploy en Streamlit Cloud
 
-### 1. Configurar Secretos
-
-En Streamlit Cloud → Settings → Secrets:
+1. Sube el repositorio a GitHub (`.env` y `secrets.toml` están en `.gitignore`)
+2. Ve a [share.streamlit.io](https://share.streamlit.io) → conecta el repo → selecciona `Home.py`
+3. En **Settings → Secrets**, añade el equivalente de tu `.env`:
 
 ```toml
 MONGO_URI = "mongodb+srv://..."
-MONGO_DB = "BioflocDB"
-MONGO_COLLECTION = "telemetria"
-MONGO_DEVICES_COLLECTION = "devices"
+MONGO_DB = "BioFloc_Monitoring"
+MONGO_COLLECTION = "sensor_data"
+MONGO_DEVICES_COLLECTION = "devices_data"
 APP_PASSWORD_HASH = "$2b$12$..."
 ```
 
-### 2. Desplegar
+---
 
-1. Ve a [share.streamlit.io](https://share.streamlit.io)
-2. Conecta tu repositorio
-3. Selecciona `Home.py` como archivo principal
-4. ¡Deploy!
+## 📊 Vistas de la Aplicación
+
+### 🏠 Dashboard
+- Tarjetas por dispositivo: estado, última lectura, hora de actualización
+- KPIs globales: Total · En Línea · Offline · Normal · Alerta · Crítico
+- Filtros: por estado, ubicación, alias/ID, checkbox offline
+- Actualización parcial por tarjeta (`@st.fragment`) o global
+
+### 📈 Gráficas
+- Carga completa del historial cacheada (1 hora de TTL)
+- Selector de rango temporal: 5 min → 1 semana
+- Media móvil (SMA) superpuesta a datos crudos
+- Estadísticas por dispositivo: mín, máx, promedio, mediana
+
+### 📥 Historial
+- Búsqueda por rango de fechas y dispositivos
+- Filtro de texto en resultados
+- Descarga en **CSV** y **Excel (.xlsx)**
+- Opción de backup histórico completo
+
+### ⚙️ Configuración
+- **Identidad**: editar alias y ubicación visible de cada dispositivo
+- **Umbrales**: definir rangos óptimos y críticos por sensor y por dispositivo
+- Los cambios se persisten directamente en `devices_data` en MongoDB
 
 ---
 
 ## 📝 Changelog
 
-### v4.0.0 (Febrero 2026)
-- ✅ **Sistema de Autenticación**: Login obligatorio con bcrypt
-- ✅ **Botón Cerrar Sesión**: En navbar, discreto
-- ✅ **Nuevo Branding**: "Monitor Biofloc - Lab. Cultivos Crustáceos UCN"
-- ✅ **UI Login Unificada**: Diseño minimalista, Enter funcional
-- ✅ **Documentación Actualizada**: README, estructura, ejemplos
-
-### v3.1.0 (Febrero 2026)
-- ✅ Dashboard: Filtro inteligente offline
-- ✅ Gráficas: Auto-actualización
-- ✅ UX mejorada en filtros
-
-### v3.0.0 (Febrero 2026)
-- ✅ Registry-First Strategy
-- ✅ Filtrado de Outliers
-- ✅ UI Mejorada en Settings
-
----
-
-## 📄 Licencia
-
-Este proyecto es de código abierto bajo licencia MIT.
+Ver [CHANGELOG.md](CHANGELOG.md) para el historial completo de versiones.
 
 ---
 
 <div align="center">
 
-**Desarrollado para el Laboratorio de Cultivos de Crustáceos**
+Desarrollado por [@Marton1123](https://github.com/Marton1123)
 
-**Departamento de Acuicultura - Universidad Católica del Norte (UCN)**
+**Laboratorio de Máquinas Inteligentes · Escuela de Ingeniería · UCN Coquimbo**
+
+**Laboratorio de Cultivos de Crustáceos · Departamento de Acuicultura · UCN**
 
 </div>

@@ -332,7 +332,10 @@ class DatabaseConnection:
         
         if not all_norm_docs: return pd.DataFrame()
             
-        all_norm_docs.sort(key=lambda x: x["timestamp"] or datetime.min, reverse=True)
+        all_norm_docs.sort(
+            key=lambda x: (x["timestamp"].replace(tzinfo=None) if x["timestamp"] and hasattr(x["timestamp"], 'tzinfo') else x["timestamp"]) or datetime.min,
+            reverse=True
+        )
         df = self._parse_historical_flat(all_norm_docs)
         
         if not df.empty and (start_date or end_date):

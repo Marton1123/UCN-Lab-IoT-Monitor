@@ -135,10 +135,10 @@ def show_view():
                         
                         if st.form_submit_button("Guardar Identidad", type="primary", width="stretch"):
                             if config_manager.update_device_metadata(selected_id, n_alias, n_loc):
-                                st.success("Guardado correctamente.")
+                                st.toast("✅ Identidad guardada correctamente.", icon="✅")
                                 st.rerun()
                             else:
-                                st.error("Error al guardar.")
+                                st.error("❌ Error al guardar. Revisa la conexión a MongoDB.")
 
     # --- PESTAÑA 2: UMBRALES POR DISPOSITIVO ---
     with t2:
@@ -184,11 +184,13 @@ def show_view():
                     dev_specifics = config_manager.get_device_thresholds(target_dev)
                     current_conf = dev_specifics.get(target_param, base_conf)
                     
-                    # Get Values
-                    d_cmin = float(current_conf.get("critical_min", 0.0))
-                    d_omin = float(current_conf.get("min_value", 4.0))
-                    d_omax = float(current_conf.get("max_value", 8.0))
-                    d_cmax = float(current_conf.get("critical_max", 12.0))
+                    # Mapear claves del sensor_defaults.json (min/optimal_min/optimal_max/max)
+                    # a las claves del formulario (critical_min/min_value/max_value/critical_max)
+                    # Prioridad: claves del formulario > claves del JSON > hardcoded genérico
+                    d_cmin = float(current_conf.get("critical_min", current_conf.get("min", 0.0)))
+                    d_omin = float(current_conf.get("min_value", current_conf.get("optimal_min", d_cmin)))
+                    d_omax = float(current_conf.get("max_value", current_conf.get("optimal_max", d_cmin + 1.0)))
+                    d_cmax = float(current_conf.get("critical_max", current_conf.get("max", d_omax + 1.0)))
 
                     # 3. Form
                     st.markdown("---")
@@ -250,7 +252,7 @@ def show_view():
                         
                         if submitted:
                             if err:
-                                st.error(f"No se puede guardar: {err}")
+                                st.error(f"❌ No se puede guardar: {err}")
                             else:
                                 new_data = current_conf.copy()
                                 new_data.update({
@@ -262,7 +264,7 @@ def show_view():
                                 })
                                 
                                 if config_manager.update_device_threshold(target_dev, target_param, new_data):
-                                    st.success(f"Configuración guardada para {target_param}.")
+                                    st.toast(f"✅ Umbrales de '{format_param_name(target_param)}' guardados.", icon="✅")
                                     st.rerun()
                                 else:
-                                    st.error("Error al guardar.")
+                                    st.error("❌ Error al guardar. Revisa la conexión a MongoDB.")

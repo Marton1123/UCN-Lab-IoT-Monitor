@@ -194,8 +194,7 @@ def show_view():
     known_devices = []
     alias_map_pre = {}
     try:
-        cm_pre = ConfigManager(DatabaseConnection())
-        meta_pre = cm_pre.get_device_metadata()
+        meta_pre = config_manager.get_device_metadata()  # Reutilizar la conexión ya existente
         if meta_pre:
             known_devices = sorted(list(meta_pre.keys()))
             for k, v in meta_pre.items():
@@ -396,9 +395,12 @@ def show_view():
         st.info("Esta opción descargará TODOS los datos históricos disponibles. Puede tardar varios minutos.")
         if st.button("Generar Backup Completo (CSV)"):
             with st.spinner("Generando backup completo..."):
+                # Usar fecha fija como ancla para que el caché funcione correctamente
+                # (datetime.now() cambia en cada llamada y rompe @st.cache_data)
                 now = datetime.now()
-                backup_start = now - timedelta(days=3650)
-                df_all = cargar_datos_rango(backup_start, now)
+                backup_start = datetime(2020, 1, 1)  # Desde el origen del proyecto
+                backup_end = datetime(now.year, now.month, now.day, 23, 59, 59)  # Fin del día actual
+                df_all = cargar_datos_rango(backup_start, backup_end)
                 
                 if not df_all.empty:
                     csv_all = convert_df_to_csv(df_all)

@@ -142,21 +142,32 @@ class SensorRegistry:
     
     @staticmethod
     def validate_sensor_config(sensor_config: Dict[str, Any]) -> bool:
-        required_fields = ["label", "unit", "min", "max", "optimal_min", "optimal_max"]
-        
-        for field in required_fields:
-            if field not in sensor_config:
-                return False
-        
+        """
+        Acepta dos formatos de clave:
+          - Formato JSON defaults: min / max / optimal_min / optimal_max
+          - Formato UI settings:   critical_min / critical_max / min_value / max_value
+        Cualquiera de los dos es válido.
+        """
+        # Mapear ambos formatos a valores comunes
         try:
-            min_val = float(sensor_config.get("min", 0))
-            max_val = float(sensor_config.get("max", 0))
-            opt_min = float(sensor_config.get("optimal_min", 0))
-            opt_max = float(sensor_config.get("optimal_max", 0))
-            
-            if not (min_val <= opt_min <= opt_max <= max_val):
+            # Formato UI (settings.py): critical_min/min_value/max_value/critical_max
+            has_ui_format = any(k in sensor_config for k in ["critical_min", "min_value", "max_value", "critical_max"])
+            # Formato JSON (sensor_defaults.json): min/max/optimal_min/optimal_max
+            has_json_format = any(k in sensor_config for k in ["min", "max", "optimal_min", "optimal_max"])
+
+            if not has_ui_format and not has_json_format:
+                return False  # No tiene ningún formato reconocido
+
+            # Extraer valores usando ambos formatos como fallback
+            c_min = float(sensor_config.get("critical_min", sensor_config.get("min", -9999)))
+            o_min = float(sensor_config.get("min_value",   sensor_config.get("optimal_min", c_min)))
+            o_max = float(sensor_config.get("max_value",   sensor_config.get("optimal_max", o_min + 1)))
+            c_max = float(sensor_config.get("critical_max", sensor_config.get("max", o_max + 1)))
+
+            # Validar orden lógico
+            if not (c_min <= o_min <= o_max <= c_max):
                 return False
         except (ValueError, TypeError):
             return False
-        
+
         return True
