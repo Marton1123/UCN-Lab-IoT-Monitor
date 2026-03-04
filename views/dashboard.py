@@ -8,7 +8,6 @@ from modules.database import DatabaseConnection
 from modules.config_manager import ConfigManager
 from modules.sensor_registry import SensorRegistry
 from modules.device_manager import DeviceManager, ConnectionStatus, HealthStatus, DeviceInfo
-from modules.auth import get_auth_token
 
 # --- SVGs CONSTANTS ---
 ICON_LOC = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: text-bottom; margin-right: 2px;"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>'
@@ -477,6 +476,9 @@ def render_filters(devices, config_manager=None):
 
 def build_card_html(device: DeviceInfo, thresholds: Dict, config_manager: ConfigManager = None, sensor_page: int = 0, total_pages: int = 1) -> str:
     """Genera el HTML de una tarjeta de dispositivo con altura fija."""
+    # Import lazy para evitar circular imports en Streamlit Cloud
+    from modules.auth import get_auth_token
+    auth_token = get_auth_token()
     
     # Obtener nombre y ubicación personalizados
     display_name = getattr(device, "external_alias", None)
@@ -638,7 +640,7 @@ def build_card_html(device: DeviceInfo, thresholds: Dict, config_manager: Config
                 </div>
             </div>
             <div style="display:flex; align-items:center; gap:6px;">
-                <a href="?page=graficas&device_id={device.device_id}&_auth={get_auth_token()}" target="_self" style="color:white; opacity:0.85; padding:4px; border-radius:4px; display:flex; text-decoration:none;" title="Ver Graficas">
+                <a href="?page=graficas&device_id={device.device_id}&_auth={auth_token}" target="_self" style="color:white; opacity:0.85; padding:4px; border-radius:4px; display:flex; text-decoration:none;" title="Ver Graficas">
                     {ICON_GRAPH_BTN}
                 </a>
                 <div style="background:rgba(255,255,255,0.2); color:white; border-radius:99px; padding:3px 10px; font-size:0.6rem; font-weight:700; border:1px solid rgba(255,255,255,0.3);">
