@@ -1,8 +1,14 @@
 import streamlit as st
 import bcrypt
 import os
+import hashlib
+from datetime import datetime, timezone
 from pathlib import Path
 import base64
+
+# Tiempo de vida del token en horas.
+# Una URL copiada deja de funcionar después de este tiempo.
+TOKEN_WINDOW_HOURS = 8
 
 def check_password(input_password: str, hashed_password: str) -> bool:
     """
@@ -34,15 +40,60 @@ def is_authenticated() -> bool:
     return st.session_state.get('authenticated', False)
 
 
+def _generate_auth_token(hour_block: int = None) -> str:
+    """Genera un token de sesión con ventana de tiempo.
+    
+    El token cambia automáticamente cada TOKEN_WINDOW_HOURS horas,
+    por lo que una URL copiada deja de ser válida al expirar la ventana.
+    
+    Args:
+        hour_block: Bloque de hora a usar. Si es None, usa el actual.
+    """
+    password_hash = os.getenv('APP_PASSWORD_HASH', '')
+    if not password_hash:
+        return ''
+    if hour_block is None:
+        now_utc = datetime.now(timezone.utc)
+        hour_block = int(now_utc.timestamp() // (TOKEN_WINDOW_HOURS * 3600))
+    seed = f"biofloc_session_{password_hash}_{hour_block}"
+    return hashlib.sha256(seed.encode()).hexdigest()[:16]
+
+
+def get_auth_token() -> str:
+    """Retorna el token de sesión actual (para uso en URLs internas)."""
+    return _generate_auth_token()
+
+
 def logout():
-    """Cierra la sesión del usuario."""
+    """Cierra la sesión del usuario y limpia el token de la URL."""
     st.session_state.authenticated = False
+    if "_auth" in st.query_params:
+        del st.query_params["_auth"]
     st.rerun()
 
 
 def init_session_check():
-    """Función de compatibilidad - no hace nada en esta versión."""
-    pass
+    """Restaura la autenticación si hay un token válido en los query params.
+    
+    Valida la ventana actual y la anterior para evitar que un usuario
+    sea expulsado justo al cambiar de ventana mientras usa la app.
+    El token dura máximo 2 × TOKEN_WINDOW_HOURS horas desde su creación.
+    """
+    if st.session_state.get('authenticated', False):
+        return  # Ya autenticado, nada que hacer
+    
+    token = st.query_params.get("_auth", None)
+    if not token:
+        return
+
+    now_utc = datetime.now(timezone.utc)
+    current_block = int(now_utc.timestamp() // (TOKEN_WINDOW_HOURS * 3600))
+
+    # Aceptar ventana actual y la anterior (gracia para usuario activo al borde)
+    for block in [current_block, current_block - 1]:
+        if token == _generate_auth_token(hour_block=block):
+            st.session_state.authenticated = True
+            return
 
 
 def render_login_page():
@@ -159,6 +210,7 @@ def render_login_page():
             if password:
                 if check_password(password, password_hash):
                     st.session_state.authenticated = True
+                    st.query_params["_auth"] = _generate_auth_token()
                     st.rerun()
                 else:
                     st.error("Contraseña incorrecta")
